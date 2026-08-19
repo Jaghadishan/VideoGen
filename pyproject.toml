@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "videogen"
+version = "0.1.0"
+description = "Personal short-video generator for a two-person YouTube channel"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]",
+    "websockets",
+    "llama-cpp-python",
+]
+
+[tool.setuptools.packages.find]
+include = ["app*"]
