@@ -16,3 +16,4 @@ build/
 # Runtime job output
 data/jobs/*
 !data/jobs/.gitkeep
+data/counter.json
