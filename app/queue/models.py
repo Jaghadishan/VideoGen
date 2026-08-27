@@ -41,6 +41,7 @@ class Job(BaseModel):
     created_at: datetime
     status: JobStatus = JobStatus.PENDING
     brief: Brief
+    needs_script_draft: bool = False
     video_model: str | None = None
     audio_model: str | None = None
     step_seconds: dict[str, float] = Field(default_factory=dict)
