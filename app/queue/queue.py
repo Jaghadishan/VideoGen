@@ -1,5 +1,6 @@
 from datetime import datetime
 
+from app.progress import events
 from app.queue import store
 from app.queue.models import Brief, Job, JobStatus
 
@@ -14,6 +15,7 @@ ACTIVE_STATUSES = {
 def submit(brief: Brief) -> Job:
     job = Job(job_id=store.next_job_id(), created_at=datetime.now(), brief=brief)
     store.save_job(job)
+    events.refresh_queue_positions(pending_jobs())
     return job
 
 

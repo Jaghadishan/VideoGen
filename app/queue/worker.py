@@ -5,6 +5,7 @@ import time
 from pathlib import Path
 
 from app import config
+from app.progress import events
 from app.queue import gpu, heartbeat, queue, store
 from app.queue.models import AudioType, Job, JobStatus
 
@@ -16,6 +17,8 @@ logger = logging.getLogger(__name__)
 def _transition(job: Job, status: JobStatus) -> None:
     job.status = status
     store.save_job(job)
+    events.publish_step_change(job)
+    events.refresh_queue_positions(queue.pending_jobs())
 
 
 def _run_stage(job: Job, status: JobStatus, step_name: str, fn) -> None:
@@ -39,6 +42,8 @@ def _generate_video(job: Job, work_dir: Path) -> None:
 
 
 def _generate_audio(job: Job, work_dir: Path) -> None:
+    events.publish_step_change(job, sub_status="preparing audio model")
+
     audio_type = job.brief.audio_type
     if audio_type == AudioType.NONE:
         job.audio_model = None
