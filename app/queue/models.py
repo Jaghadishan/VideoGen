@@ -31,6 +31,7 @@ class Brief(BaseModel):
     visual_description: str
     audio_type: AudioType
     script_or_lyrics: str
+    script_was_provided: bool
     mood_and_style: str
     target_length: str
     content_policy: ContentPolicy

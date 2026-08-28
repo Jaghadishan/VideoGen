@@ -5,4 +5,7 @@ DATA_DIR = DATA_ROOT / "jobs"
 COUNTER_FILE = DATA_ROOT / "counter.json"
 VIDEO_OUTPUT_FILENAME = "video.mp4"
 
-# TODO: model registry, VRAM budgets, fallback chain order
+CHAT_MODEL_PATH = Path("models/qwen3-14b-q4_k_m.gguf")
+CHAT_CONTEXT_SIZE = 8192
+
+# TODO: video/audio model registry, VRAM budgets, fallback chain order

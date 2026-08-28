@@ -17,3 +17,6 @@ build/
 data/jobs/*
 !data/jobs/.gitkeep
 data/counter.json
+
+# Downloaded model weights
+models/
