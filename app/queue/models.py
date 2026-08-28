@@ -26,9 +26,14 @@ class JobStatus(str, Enum):
     FAILED = "failed"
 
 
+class Shot(BaseModel):
+    description: str
+
+
 class Brief(BaseModel):
     title: str
     visual_description: str
+    shots: list[Shot]
     audio_type: AudioType
     script_or_lyrics: str
     script_was_provided: bool

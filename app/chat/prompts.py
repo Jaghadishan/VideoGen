@@ -58,11 +58,18 @@ any text before or after the JSON.
 
 {
   "title": string,
-  "visual_description": string,      // subject, setting, action, and any
-                                      // recurring-character details to
-                                      // keep visually consistent —
-                                      // written as a prompt for a video
-                                      // generation model
+  "visual_description": string,      // overarching, consistency-carrying
+                                      // description: subject, recurring-
+                                      // character appearance, setting,
+                                      // overall visual style
+  "shots": [                         // ordered shot list — roughly one
+    { "description": string }        // entry per ~5s of target runtime;
+  ],                                 // "short" target_length is usually
+                                      // one shot. Each description is
+                                      // that shot's specific action/
+                                      // framing, combined with
+                                      // visual_description above when
+                                      // building that shot's prompt
   "audio_type": string,              // one of: "song", "voiceover",
                                       // "ambient", "none"
   "script_or_lyrics": string,        // full lyrics, narration script, or

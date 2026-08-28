@@ -16,6 +16,7 @@ class GenerateRequest(BaseModel):
 class BriefPreview(BaseModel):
     brief: Brief
     needs_script_draft: bool
+    estimated_seconds: float
 
 
 class ConfirmRequest(BaseModel):
@@ -26,9 +27,11 @@ class ConfirmRequest(BaseModel):
 @router.post("/generate", response_model=BriefPreview)
 def generate(request: GenerateRequest) -> BriefPreview:
     from app.chat import llm
+    from app.pipeline.video import fallback
 
     brief, needs_script_draft = llm.extract_brief(request.session_id)
-    return BriefPreview(brief=brief, needs_script_draft=needs_script_draft)
+    estimated_seconds = fallback.estimate_seconds(brief.shots)
+    return BriefPreview(brief=brief, needs_script_draft=needs_script_draft, estimated_seconds=estimated_seconds)
 
 
 @router.post("/confirm", response_model=Job)
