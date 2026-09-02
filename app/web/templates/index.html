@@ -1,1 +1,517 @@
-<!-- TODO: chat box, Generate button, brief-confirmation panel, live progress view -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VideoGen</title>
+<style>
+  :root {
+    --bg: #f7f7f8;
+    --panel: #ffffff;
+    --border: #e2e2e6;
+    --text: #1c1c1f;
+    --muted: #6b6b74;
+    --accent: #4f46e5;
+    --accent-text: #ffffff;
+    --danger: #d33;
+    --done: #1a9e5c;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+  }
+  #app {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 24px 16px 80px;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+  header {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 16px;
+  }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+  }
+  [hidden] { display: none !important; }
+
+  #messages {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 200px;
+    max-height: 55vh;
+    overflow-y: auto;
+    margin-bottom: 12px;
+  }
+  .msg {
+    padding: 10px 14px;
+    border-radius: 12px;
+    max-width: 80%;
+    line-height: 1.4;
+    white-space: pre-wrap;
+  }
+  .msg.assistant { background: #eef0ff; align-self: flex-start; }
+  .msg.user { background: var(--accent); color: var(--accent-text); align-self: flex-end; }
+
+  #chat-input-row { display: flex; gap: 8px; }
+  textarea, input[type=text], select {
+    font: inherit;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 10px;
+    width: 100%;
+  }
+  #chat-input { flex: 1; resize: none; }
+  button {
+    font: inherit;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 16px;
+    cursor: pointer;
+    background: var(--border);
+    color: var(--text);
+  }
+  button.primary { background: var(--accent); color: var(--accent-text); }
+  button:disabled { opacity: .5; cursor: default; }
+
+  #generate-row { margin-top: 12px; display: flex; justify-content: flex-end; }
+
+  .field { margin-bottom: 14px; }
+  .field label {
+    display: block;
+    font-size: .8rem;
+    font-weight: 600;
+    color: var(--muted);
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+  }
+  #confirm-actions { display: flex; justify-content: space-between; margin-top: 8px; }
+  #estimate { font-size: .9rem; color: var(--muted); margin-bottom: 16px; }
+
+  #steps { list-style: none; padding: 0; margin: 0 0 16px; }
+  #steps li {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    color: var(--muted);
+  }
+  #steps li:last-child { border-bottom: none; }
+  #steps li.active { color: var(--text); font-weight: 600; }
+  #steps li.done { color: var(--done); }
+  #steps li .sub { font-weight: 400; font-size: .85rem; color: var(--muted); }
+  #queue-banner {
+    background: #fff6e0;
+    border: 1px solid #f0d98a;
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-bottom: 16px;
+    font-size: .9rem;
+  }
+  #error-banner {
+    background: #fdecec;
+    border: 1px solid #f3b9b9;
+    color: var(--danger);
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-bottom: 16px;
+  }
+  #result video { width: 100%; border-radius: 8px; margin-bottom: 12px; }
+  #new-video-btn { margin-top: 12px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>VideoGen</header>
+
+  <section id="chat-view" class="panel">
+    <div id="messages"></div>
+    <div id="chat-input-row">
+      <textarea id="chat-input" rows="2" placeholder="Tell me about the video..."></textarea>
+      <button id="send-btn" class="primary">Send</button>
+    </div>
+    <div id="generate-row">
+      <button id="generate-btn" class="primary">Generate</button>
+    </div>
+  </section>
+
+  <section id="confirm-view" class="panel" hidden>
+    <div id="estimate"></div>
+
+    <div class="field">
+      <label for="f-title">Title</label>
+      <input type="text" id="f-title">
+    </div>
+    <div class="field">
+      <label for="f-visual">Visual description</label>
+      <textarea id="f-visual" rows="3"></textarea>
+    </div>
+    <div class="field">
+      <label for="f-shots">Shots (one per line)</label>
+      <textarea id="f-shots" rows="4"></textarea>
+    </div>
+    <div class="field">
+      <label for="f-audio-type">Audio type</label>
+      <select id="f-audio-type">
+        <option value="song">song</option>
+        <option value="voiceover">voiceover</option>
+        <option value="ambient">ambient</option>
+        <option value="none">none</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="f-script">Script / lyrics</label>
+      <textarea id="f-script" rows="4"></textarea>
+    </div>
+    <div class="field">
+      <label for="f-mood">Mood and style</label>
+      <input type="text" id="f-mood">
+    </div>
+    <div class="field">
+      <label for="f-length">Target length</label>
+      <input type="text" id="f-length">
+    </div>
+    <div class="field">
+      <label for="f-policy">Content policy</label>
+      <select id="f-policy">
+        <option value="standard">standard</option>
+        <option value="unrestricted">unrestricted</option>
+      </select>
+    </div>
+
+    <div id="confirm-actions">
+      <button id="back-btn">Back</button>
+      <button id="confirm-btn" class="primary">Confirm</button>
+    </div>
+  </section>
+
+  <section id="progress-view" class="panel" hidden>
+    <div id="queue-banner" hidden></div>
+    <div id="error-banner" hidden></div>
+    <ul id="steps">
+      <li data-step="writing_script"><span>Writing script</span><span class="sub"></span></li>
+      <li data-step="generating_video"><span>Generating video</span><span class="sub"></span></li>
+      <li data-step="generating_audio"><span>Generating audio</span><span class="sub"></span></li>
+      <li data-step="muxing"><span>Muxing</span><span class="sub"></span></li>
+      <li data-step="done"><span>Done</span><span class="sub"></span></li>
+    </ul>
+    <div id="result" hidden>
+      <video controls></video>
+      <a id="download-link" download>Download</a>
+    </div>
+    <button id="new-video-btn" hidden>Start a new video</button>
+  </section>
+</div>
+
+<script>
+(function () {
+  const state = {
+    sessionId: localStorage.getItem('sessionId') || null,
+    activeJobId: localStorage.getItem('activeJobId') || null,
+    needsScriptDraft: false,
+    ws: null,
+    stepOrder: ['writing_script', 'generating_video', 'generating_audio', 'muxing', 'done'],
+  };
+
+  const OPENING_MESSAGE = "What are we making today? Tell me anything you've got so far — a concept, a character, a mood, a script — and we'll figure out the rest together.";
+
+  const el = (id) => document.getElementById(id);
+  const chatView = el('chat-view');
+  const confirmView = el('confirm-view');
+  const progressView = el('progress-view');
+
+  function show(view) {
+    [chatView, confirmView, progressView].forEach((v) => { v.hidden = v !== view; });
+  }
+
+  // ---------- chat ----------
+
+  function appendMessage(role, content) {
+    const div = document.createElement('div');
+    div.className = 'msg ' + role;
+    div.textContent = content;
+    el('messages').appendChild(div);
+    el('messages').scrollTop = el('messages').scrollHeight;
+  }
+
+  async function loadChatHistory() {
+    if (!state.sessionId) {
+      appendMessage('assistant', OPENING_MESSAGE);
+      return;
+    }
+    try {
+      const res = await fetch(`/chat/messages/${state.sessionId}`);
+      if (!res.ok) throw new Error('session not found');
+      const history = await res.json();
+      history.forEach((m) => appendMessage(m.role, m.content));
+    } catch (err) {
+      localStorage.removeItem('sessionId');
+      state.sessionId = null;
+      appendMessage('assistant', OPENING_MESSAGE);
+    }
+  }
+
+  async function sendMessage() {
+    const input = el('chat-input');
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+    appendMessage('user', text);
+    el('send-btn').disabled = true;
+    try {
+      const res = await fetch('/chat/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: state.sessionId, message: text }),
+      });
+      const data = await res.json();
+      state.sessionId = data.session_id;
+      localStorage.setItem('sessionId', state.sessionId);
+      appendMessage('assistant', data.reply);
+    } catch (err) {
+      appendMessage('assistant', 'Something went wrong reaching the chat model. Try again?');
+    } finally {
+      el('send-btn').disabled = false;
+    }
+  }
+
+  el('send-btn').addEventListener('click', sendMessage);
+  el('chat-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+
+  // ---------- brief confirmation ----------
+
+  let currentBrief = null;
+
+  el('generate-btn').addEventListener('click', async () => {
+    if (!state.sessionId) return;
+    el('generate-btn').disabled = true;
+    try {
+      const res = await fetch('/jobs/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: state.sessionId }),
+      });
+      const preview = await res.json();
+      openConfirmView(preview);
+    } finally {
+      el('generate-btn').disabled = false;
+    }
+  });
+
+  function openConfirmView(preview) {
+    currentBrief = preview.brief;
+    state.needsScriptDraft = preview.needs_script_draft;
+
+    const minutes = Math.round(preview.estimated_seconds / 60);
+    el('estimate').textContent = `Estimated generation time: ~${minutes} min`;
+
+    el('f-title').value = currentBrief.title;
+    el('f-visual').value = currentBrief.visual_description;
+    el('f-shots').value = currentBrief.shots.map((s) => s.description).join('\n');
+    el('f-audio-type').value = currentBrief.audio_type;
+    el('f-script').value = currentBrief.script_or_lyrics;
+    el('f-mood').value = currentBrief.mood_and_style;
+    el('f-length').value = currentBrief.target_length;
+    el('f-policy').value = currentBrief.content_policy;
+
+    show(confirmView);
+  }
+
+  el('back-btn').addEventListener('click', () => show(chatView));
+
+  el('confirm-btn').addEventListener('click', async () => {
+    const brief = {
+      title: el('f-title').value,
+      visual_description: el('f-visual').value,
+      shots: el('f-shots').value
+        .split('\n')
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .map((description) => ({ description })),
+      audio_type: el('f-audio-type').value,
+      script_or_lyrics: el('f-script').value,
+      script_was_provided: currentBrief.script_was_provided,
+      mood_and_style: el('f-mood').value,
+      target_length: el('f-length').value,
+      content_policy: el('f-policy').value,
+    };
+
+    el('confirm-btn').disabled = true;
+    try {
+      const res = await fetch('/jobs/confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ brief, needs_script_draft: state.needsScriptDraft }),
+      });
+      const job = await res.json();
+      startTrackingJob(job.job_id);
+    } finally {
+      el('confirm-btn').disabled = false;
+    }
+  });
+
+  // ---------- progress ----------
+
+  function resetStepClasses() {
+    document.querySelectorAll('#steps li').forEach((li) => li.classList.remove('active', 'done'));
+  }
+
+  function renderStatus(status, model, subStatus) {
+    el('queue-banner').hidden = true;
+    resetStepClasses();
+
+    const idx = state.stepOrder.indexOf(status);
+    if (idx === -1) return;
+
+    state.stepOrder.forEach((step, i) => {
+      const li = document.querySelector(`#steps li[data-step="${step}"]`);
+      if (i < idx || (step === 'done' && status === 'done')) li.classList.add('done');
+      else if (i === idx) li.classList.add('active');
+    });
+
+    if (model || subStatus) {
+      const activeLi = document.querySelector(`#steps li[data-step="${status}"]`);
+      const bits = [];
+      if (model) bits.push(model);
+      if (subStatus) bits.push(subStatus);
+      activeLi.querySelector('.sub').textContent = bits.join(' — ');
+    }
+  }
+
+  function showQueuePosition(position) {
+    const banner = el('queue-banner');
+    banner.hidden = false;
+    banner.textContent = position === 1 ? 'Queued — next up' : `Queued — position ${position}`;
+  }
+
+  function showError(message) {
+    const banner = el('error-banner');
+    banner.hidden = false;
+    banner.textContent = message || 'The job failed.';
+  }
+
+  function showResult(jobId) {
+    const url = `/jobs/${jobId}/download`;
+    const result = el('result');
+    result.hidden = false;
+    result.querySelector('video').src = url;
+    el('download-link').href = url;
+    el('new-video-btn').hidden = false;
+  }
+
+  async function startTrackingJob(jobId) {
+    state.activeJobId = jobId;
+    localStorage.setItem('activeJobId', jobId);
+    show(progressView);
+    el('error-banner').hidden = true;
+    el('result').hidden = true;
+    el('new-video-btn').hidden = true;
+    resetStepClasses();
+
+    const job = await fetchJob(jobId);
+    if (job) applyJobSnapshot(job);
+    connectWebSocket();
+  }
+
+  async function fetchJob(jobId) {
+    try {
+      const res = await fetch(`/jobs/${jobId}`);
+      if (!res.ok) return null;
+      return await res.json();
+    } catch (err) {
+      return null;
+    }
+  }
+
+  function applyJobSnapshot(job) {
+    document.querySelector('#steps li[data-step="writing_script"]').hidden = !job.needs_script_draft;
+
+    if (job.status === 'pending') {
+      showQueuePosition(1);
+    } else if (job.status === 'failed') {
+      showError(job.error);
+    } else if (job.status === 'done') {
+      renderStatus('done', null, null);
+      showResult(job.job_id);
+    } else {
+      const model = job.status === 'generating_video' ? job.video_model
+        : job.status === 'generating_audio' ? job.audio_model
+        : null;
+      renderStatus(job.status, model, null);
+    }
+  }
+
+  function connectWebSocket() {
+    if (state.ws) {
+      state.ws.onclose = null;
+      state.ws.close();
+    }
+    const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const ws = new WebSocket(`${proto}//${location.host}/ws/progress`);
+    state.ws = ws;
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.job_id !== state.activeJobId) return;
+
+      if (data.type === 'queue_position') {
+        showQueuePosition(data.position);
+      } else if (data.type === 'step_change') {
+        if (data.status === 'failed') {
+          showError('The job failed.');
+        } else if (data.status === 'done') {
+          renderStatus('done', null, null);
+          showResult(data.job_id);
+        } else {
+          renderStatus(data.status, data.model, data.sub_status);
+        }
+      }
+    };
+
+    ws.onclose = () => {
+      if (state.activeJobId) setTimeout(connectWebSocket, 2000);
+    };
+  }
+
+  el('new-video-btn').addEventListener('click', () => {
+    state.activeJobId = null;
+    localStorage.removeItem('activeJobId');
+    if (state.ws) {
+      state.ws.onclose = null;
+      state.ws.close();
+    }
+    el('messages').innerHTML = '';
+    state.sessionId = null;
+    localStorage.removeItem('sessionId');
+    show(chatView);
+    appendMessage('assistant', OPENING_MESSAGE);
+  });
+
+  // ---------- boot ----------
+
+  if (state.activeJobId) {
+    startTrackingJob(state.activeJobId);
+  } else {
+    show(chatView);
+    loadChatHistory();
+  }
+})();
+</script>
+</body>
+</html>

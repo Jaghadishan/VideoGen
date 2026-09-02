@@ -4,6 +4,7 @@ import subprocess
 from pathlib import Path
 
 from app import config
+from app.progress import events
 from app.pipeline.video.base import VideoBackend
 from app.pipeline.video.cogvideox import CogVideoX2B
 from app.pipeline.video.hunyuan import HunyuanVideo15
@@ -42,6 +43,7 @@ def generate(job: Job, work_dir: Path) -> str:
 
     last_error: Exception | None = None
     for backend in chain:
+        events.publish_step_change(job, sub_status=f"trying {backend.name}")
         try:
             _generate_all_shots(job, shots, backend, work_dir)
             return backend.name
