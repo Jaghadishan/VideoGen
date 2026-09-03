@@ -27,6 +27,28 @@ COGVIDEOX_NEGATIVE_PROMPT = (
     "signature, jpeg artifacts, static image, jerky motion"
 )
 
+# --- Wan 2.2 TI2V-5B video backend ------------------------------------------
+# Wan 2.2 needs a bleeding-edge diffusers (huggingface-hub 1.x) that clashes with
+# the main env's transformers 4.49 pin, so it gets its own venv and runs
+# scripts/wan_infer.py as a subprocess. Unlike CogVideoX-2B it does real
+# image-to-video, so it carries multi-shot continuity.
+WAN_TI2V_5B_PATH = MODELS_ROOT / "wan2.2-ti2v-5b"
+WAN_PYTHON = Path(".venv-wan/Scripts/python.exe")
+WAN_INFER_SCRIPT = Path("scripts/wan_infer.py")
+WAN_NUM_FRAMES = 121          # 5 s at 24 fps, the model's native length
+WAN_FPS = 24
+WAN_HEIGHT = 704
+WAN_WIDTH = 1280
+WAN_NUM_INFERENCE_STEPS = 50
+WAN_GUIDANCE_SCALE = 5.0
+WAN_TIMEOUT_SECONDS = 3600
+WAN_NEGATIVE_PROMPT = (
+    "色调艳丽，过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，"
+    "最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，"
+    "画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，"
+    "杂乱的背景，三条腿，背景人很多，倒着走"
+)
+
 # --- Kokoro-82M voiceover backend --------------------------------------------
 # Weights download to the HF cache on first use (hexgrad/Kokoro-82M, ~330MB).
 KOKORO_LANG_CODE = "a"  # 'a' American English, 'b' British English

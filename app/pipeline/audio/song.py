@@ -85,12 +85,15 @@ class DiffRhythmPlus(AudioBackend):
         env["PYTHONPATH"] = str(repo.resolve())
         env.update(_espeak_env())
 
+        env["PYTHONIOENCODING"] = "utf-8"
         result = subprocess.run(
             cmd,
             cwd=str(repo.resolve()),
             env=env,
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=config.DIFFRHYTHM_TIMEOUT_SECONDS,
         )
         if result.returncode != 0:
