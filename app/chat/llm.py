@@ -1,4 +1,5 @@
 import json
+import re
 import threading
 
 from llama_cpp import Llama
@@ -10,6 +11,16 @@ from app.queue.models import Brief, Job
 _llm: Llama | None = None
 _llm_lock = threading.Lock()
 
+# Qwen3 is a reasoning model: it wraps its chain-of-thought in a <think>...</think>
+# block before the actual answer. We turn that off where the model supports it
+# (the /no_think soft switch) and strip any leftover blocks regardless — Qwen3
+# still emits an empty one even with /no_think. Without this, brief extraction's
+# json.loads() chokes on the reasoning prefix and the planning chat leaks the
+# model's private reasoning into the UI.
+_NO_THINK = "/no_think"
+_THINK_BLOCK_RE = re.compile(r"<think>.*?</think>", re.DOTALL)
+_JSON_FENCE_RE = re.compile(r"```(?:json)?\s*(\{.*\})\s*```", re.DOTALL)
+
 
 def _get_llm() -> Llama:
     global _llm
@@ -19,24 +30,46 @@ def _get_llm() -> Llama:
         return _llm
 
 
-def _complete(system_prompt: str, user_prompt: str) -> str:
+def _strip_thinking(text: str) -> str:
+    text = _THINK_BLOCK_RE.sub("", text)
+    # A truncated generation can leave an unclosed <think> with no answer after it.
+    if "<think>" in text and "</think>" not in text:
+        text = text.split("<think>", 1)[0]
+    return text.strip()
+
+
+def _system(prompt: str) -> dict:
+    content = f"{prompt}\n\n{_NO_THINK}" if _NO_THINK else prompt
+    return {"role": "system", "content": content}
+
+
+def _chat(messages: list[dict]) -> str:
     llm = _get_llm()
-    completion = llm.create_chat_completion(
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ]
-    )
-    return completion["choices"][0]["message"]["content"]
+    completion = llm.create_chat_completion(messages=messages)
+    return _strip_thinking(completion["choices"][0]["message"]["content"])
+
+
+def _complete(system_prompt: str, user_prompt: str) -> str:
+    return _chat([_system(system_prompt), {"role": "user", "content": user_prompt}])
+
+
+def _extract_json_object(text: str) -> str:
+    """Pull the JSON object out of a response that wrapped it in a ```json fence
+    or surrounding prose despite system prompt 2 asking for bare JSON."""
+    fence = _JSON_FENCE_RE.search(text)
+    if fence:
+        return fence.group(1)
+    start = text.find("{")
+    end = text.rfind("}")
+    if start == -1 or end == -1 or end < start:
+        raise ValueError(f"no JSON object in model response: {text!r}")
+    return text[start : end + 1]
 
 
 def reply(session_id: str) -> str:
-    llm = _get_llm()
-    messages = [{"role": "system", "content": prompts.PLANNING_SYSTEM_PROMPT}]
+    messages = [_system(prompts.PLANNING_SYSTEM_PROMPT)]
     messages += [{"role": m.role, "content": m.content} for m in session.history(session_id)]
-
-    completion = llm.create_chat_completion(messages=messages)
-    return completion["choices"][0]["message"]["content"]
+    return _chat(messages)
 
 
 def extract_brief(session_id: str) -> tuple[Brief, bool]:
@@ -44,7 +77,7 @@ def extract_brief(session_id: str) -> tuple[Brief, bool]:
     user_prompt = f"{transcript}\n\n{prompts.BRIEF_EXTRACTION_SUFFIX}"
 
     raw = _complete(prompts.BRIEF_EXTRACTION_SYSTEM_PROMPT, user_prompt)
-    data = json.loads(raw)
+    data = json.loads(_extract_json_object(raw))
 
     script_was_provided = data["script_was_provided"]
     brief = Brief(**data)
