@@ -50,6 +50,10 @@ def generate(job: Job, work_dir: Path) -> str:
         except Exception as exc:
             logger.warning("Video backend %s failed for job %s: %s", backend.name, job.job_id, exc)
             last_error = exc
+        finally:
+            # Free the GPU before the next backend attempt or the audio stage —
+            # 12GB can't hold two models at once.
+            backend.release_vram()
 
     raise RuntimeError(f"All video backends failed for job {job.job_id}") from last_error
 

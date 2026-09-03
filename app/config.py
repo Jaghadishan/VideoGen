@@ -7,10 +7,25 @@ VIDEO_OUTPUT_FILENAME = "video.mp4"
 RAW_VIDEO_FILENAME = "video_raw.mp4"
 RAW_AUDIO_FILENAME = "audio_raw.wav"
 
-CHAT_MODEL_PATH = Path("models/qwen3-14b-q4_k_m.gguf")
+MODELS_ROOT = Path("models")
+
+CHAT_MODEL_PATH = MODELS_ROOT / "qwen3-14b-q4_k_m.gguf"
 CHAT_CONTEXT_SIZE = 8192
 
 MULTI_SHOT_THRESHOLD = 5
+
+# --- CogVideoX-2B video backend -------------------------------------------------
+# Local snapshot dir (downloaded with `hf download THUDM/CogVideoX-2b --local-dir`).
+COGVIDEOX_2B_PATH = MODELS_ROOT / "cogvideox-2b"
+# 49 frames at 8 fps = ~6 s, the resolution/length CogVideoX-2B was trained on.
+COGVIDEOX_NUM_FRAMES = 49
+COGVIDEOX_FPS = 8
+COGVIDEOX_NUM_INFERENCE_STEPS = 50
+COGVIDEOX_GUIDANCE_SCALE = 6.0
+COGVIDEOX_NEGATIVE_PROMPT = (
+    "low quality, blurry, distorted, deformed, disfigured, watermark, text, "
+    "signature, jpeg artifacts, static image, jerky motion"
+)
 
 # Rough per-clip generation time in seconds — midpoints of the ranges in
 # Specs.md. Replace with a measured rolling average once real jobs have

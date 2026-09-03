@@ -16,6 +16,25 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest"]
+# GPU generation backends. Install on the 4070 box only, and install a
+# CUDA build of torch first from the PyTorch index, e.g.:
+#   pip install torch --index-url https://download.pytorch.org/whl/cu124
+# Then:  pip install -e ".[gpu]"
+# Version pins matter here: diffusers>=0.35 requires huggingface-hub 1.x, which
+# transformers 4.x refuses; transformers 5.x breaks the CogVideoX T5 tokenizer
+# load ("tiktoken is required"). This trio is the tested-working combination.
+gpu = [
+    "torch",
+    "diffusers==0.34.0",
+    "transformers==4.49.0",
+    "huggingface_hub>=0.26,<1.0",
+    "tokenizers>=0.20,<0.22",
+    "accelerate",
+    "sentencepiece",
+    "protobuf",
+    "imageio",
+    "imageio-ffmpeg",
+]
 
 [tool.setuptools.packages.find]
 include = ["app*"]
