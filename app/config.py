@@ -27,6 +27,27 @@ COGVIDEOX_NEGATIVE_PROMPT = (
     "signature, jpeg artifacts, static image, jerky motion"
 )
 
+# --- Kokoro-82M voiceover backend --------------------------------------------
+# Weights download to the HF cache on first use (hexgrad/Kokoro-82M, ~330MB).
+KOKORO_LANG_CODE = "a"  # 'a' American English, 'b' British English
+KOKORO_SPEED = 1.0
+KOKORO_SAMPLE_RATE = 24000
+# Split the narration on sentence ends as well as newlines, so chunk boundaries
+# (Kokoro re-chunks anything over ~510 phoneme tokens internally) fall between
+# sentences rather than mid-clause.
+KOKORO_SPLIT_PATTERN = r"\n+|(?<=[.!?])[\"')\]]?\s+"
+# Voices the brief's narration_voice may choose from (American English, to match
+# KOKORO_LANG_CODE). af_* female, am_* male. Anything else falls back to default.
+KOKORO_DEFAULT_VOICE = "af_heart"
+KOKORO_VOICES = {
+    "af_heart",    # warm, natural female — the default
+    "af_bella",    # bright, expressive female
+    "af_nicole",   # soft, close-mic female
+    "am_michael",  # even, neutral male
+    "am_fenrir",   # deep, resonant male
+    "am_puck",     # lively, upbeat male
+}
+
 # Rough per-clip generation time in seconds — midpoints of the ranges in
 # Specs.md. Replace with a measured rolling average once real jobs have
 # run on the 4070.

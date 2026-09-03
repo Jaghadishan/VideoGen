@@ -35,6 +35,16 @@ gpu = [
     "imageio",
     "imageio-ffmpeg",
 ]
+# Audio generation backends (4070 box). Install alongside gpu: pip install -e ".[gpu,audio]"
+audio = [
+    "kokoro>=0.9.4",
+    "misaki[en]",
+    "soundfile",
+    # misaki[en]'s spaCy G2P model. Pinned explicitly so a fresh install doesn't
+    # depend on misaki runtime-`pip install`ing it (fails under a service /
+    # offline / read-only env).
+    "en_core_web_sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl",
+]
 
 [tool.setuptools.packages.find]
 include = ["app*"]

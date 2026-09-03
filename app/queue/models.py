@@ -40,6 +40,11 @@ class Brief(BaseModel):
     mood_and_style: str
     target_length: str
     content_policy: ContentPolicy
+    # Only meaningful when audio_type == "voiceover". The planning model picks a
+    # Kokoro voice to fit the narrator/tone; unknown values fall back to the
+    # default at synthesis time (see config.KOKORO_VOICES). Optional so older
+    # briefs and the confirm round-trip still validate.
+    narration_voice: str = "af_heart"
 
 
 class Job(BaseModel):

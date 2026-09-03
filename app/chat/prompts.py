@@ -84,9 +84,21 @@ any text before or after the JSON.
   "mood_and_style": string,          // tone, pacing, visual/animation style
   "target_length": string,           // "short" or an approximate
                                       // duration for a longer piece
-  "content_policy": string           // "standard" or "unrestricted",
+  "content_policy": string,          // "standard" or "unrestricted",
                                       // per the user's answer earlier in
                                       // the conversation
+  "narration_voice": string          // only used when audio_type is
+                                      // "voiceover" — pick the voice that
+                                      // best fits the narrator/tone:
+                                      //   "af_heart"   warm natural female
+                                      //   "af_bella"   bright expressive female
+                                      //   "af_nicole"  soft close-mic female
+                                      //   "am_michael" even neutral male
+                                      //   "am_fenrir"  deep resonant male
+                                      //   "am_puck"    lively upbeat male
+                                      // use "af_heart" if audio_type isn't
+                                      // "voiceover" or nothing suggests a
+                                      // specific narrator
 }
 
 Where something wasn't explicitly discussed, make a reasonable, concrete
