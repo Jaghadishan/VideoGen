@@ -62,7 +62,8 @@ def _generate_all_shots(job: Job, shots: list[Shot], backend: VideoBackend, work
         clip_path = work_dir / f"shot_{index:03d}.mp4"
         backend.generate(job, shot, clip_path, reference_image=reference_image)
         clip_paths.append(clip_path)
-        reference_image = _extract_last_frame(clip_path, work_dir / f"shot_{index:03d}_last_frame.png")
+        if index < len(shots) - 1:
+            reference_image = _extract_last_frame(clip_path, work_dir / f"shot_{index:03d}_last_frame.png")
 
     _concatenate(clip_paths, work_dir / config.RAW_VIDEO_FILENAME)
 
