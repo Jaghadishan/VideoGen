@@ -6,6 +6,7 @@ Specs.md
 __pycache__/
 *.pyc
 .venv/
+.venv-dr/
 venv/
 *.egg-info/
 dist/
@@ -21,3 +22,7 @@ data/counter.json
 
 # Downloaded model weights
 models/
+
+# Vendored research repo for the DiffRhythm song backend (cloned, not committed —
+# see 4070-setup.md). Its runtime model cache lands in third_party/DiffRhythm/pretrained/.
+third_party/

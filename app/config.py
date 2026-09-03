@@ -48,6 +48,21 @@ KOKORO_VOICES = {
     "am_puck",     # lively, upbeat male
 }
 
+# --- DiffRhythm song backend -------------------------------------------------
+# DiffRhythm is a research repo (no pip package) with pinned deps that clash with
+# ours (phonemizer vs phonemizer-fork, accelerate), so it lives in its own clone
+# + venv and we drive its infer/infer.py as a subprocess. See 4070-setup.md.
+DIFFRHYTHM_DIR = Path("third_party/DiffRhythm")
+DIFFRHYTHM_PYTHON = Path(".venv-dr/Scripts/python.exe")
+DIFFRHYTHM_SAMPLE_RATE = 44100
+# audio-length arg: exactly 95 (base model) or 96..285 (full model). "short"
+# briefs use the floor; longer briefs are clamped into this range.
+DIFFRHYTHM_MIN_SECONDS = 95
+DIFFRHYTHM_MAX_SECONDS = 285
+DIFFRHYTHM_DEFAULT_LONG_SECONDS = 180
+DIFFRHYTHM_LYRIC_INTRO_SECONDS = 4.0  # instrumental lead-in before the first line
+DIFFRHYTHM_TIMEOUT_SECONDS = 1800
+
 # Rough per-clip generation time in seconds — midpoints of the ranges in
 # Specs.md. Replace with a measured rolling average once real jobs have
 # run on the 4070.
