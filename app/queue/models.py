@@ -53,6 +53,9 @@ class Job(BaseModel):
     status: JobStatus = JobStatus.PENDING
     brief: Brief
     needs_script_draft: bool = False
+    # Explicit "maximum quality, I don't mind waiting" trigger — routes video
+    # generation to Wan 2.2 A14B only, bypassing the automatic fallback chain.
+    max_quality: bool = False
     video_model: str | None = None
     audio_model: str | None = None
     step_seconds: dict[str, float] = Field(default_factory=dict)

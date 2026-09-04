@@ -190,6 +190,10 @@
       </select>
     </div>
 
+    <div class="field">
+      <label><input type="checkbox" id="f-max-quality"> Maximum quality (Wan 2.2 14B — much slower)</label>
+    </div>
+
     <div id="confirm-actions">
       <button id="back-btn">Back</button>
       <button id="confirm-btn" class="primary">Confirm</button>
@@ -320,6 +324,7 @@
 
     const minutes = Math.round(preview.estimated_seconds / 60);
     el('estimate').textContent = `Estimated generation time: ~${minutes} min`;
+    el('f-max-quality').checked = false;
 
     el('f-title').value = currentBrief.title;
     el('f-visual').value = currentBrief.visual_description;
@@ -358,7 +363,7 @@
       const res = await fetch('/jobs/confirm', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ brief, needs_script_draft: state.needsScriptDraft }),
+        body: JSON.stringify({ brief, needs_script_draft: state.needsScriptDraft, max_quality: el('f-max-quality').checked }),
       });
       const job = await res.json();
       startTrackingJob(job.job_id);

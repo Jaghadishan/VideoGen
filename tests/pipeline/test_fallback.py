@@ -24,13 +24,42 @@ class FakeBackend(VideoBackend):
         output_path.write_bytes(b"fake video bytes")
 
 
-def _job(num_shots: int = 1) -> Job:
-    return Job(job_id="19082026_000000_000001", created_at=datetime.now(), brief=make_brief(num_shots))
+def _job(num_shots: int = 1, max_quality: bool = False) -> Job:
+    return Job(
+        job_id="19082026_000000_000001",
+        created_at=datetime.now(),
+        brief=make_brief(num_shots),
+        max_quality=max_quality,
+    )
 
 
 def test_select_chain_below_threshold_uses_quality_first():
     shots = [Shot(description="a")]
     assert fallback._select_chain(shots) is fallback.CHAIN
+
+
+def test_select_chain_max_quality_uses_wan14b_only():
+    shots = [Shot(description="a")] * 8  # even a multi-shot job
+    chain = fallback._select_chain(shots, max_quality=True)
+    assert chain is fallback.MAX_QUALITY_CHAIN
+    assert [b.name for b in chain] == ["wan_2.2_14b"]
+
+
+def test_estimate_seconds_max_quality_uses_wan14b_eta():
+    shots = [Shot(description="a")] * 2
+    expected = 2 * config.VIDEO_MODEL_ETA_SECONDS["wan_2.2_14b"]
+    assert fallback.estimate_seconds(shots, max_quality=True) == expected
+
+
+def test_generate_max_quality_job_routes_to_wan14b(monkeypatch, tmp_path):
+    only = FakeBackend("wan_2.2_14b")
+    monkeypatch.setattr(fallback, "MAX_QUALITY_CHAIN", [only])
+    monkeypatch.setattr(fallback, "_concatenate", lambda clip_paths, output_path: None)
+
+    model = fallback.generate(_job(max_quality=True), tmp_path)
+
+    assert model == "wan_2.2_14b"
+    assert only.calls
 
 
 def test_select_chain_at_threshold_uses_speed_first():
@@ -53,7 +82,7 @@ def test_estimate_seconds_multi_shot_uses_speed_first_chain():
 def test_generate_falls_back_to_next_backend_on_failure(monkeypatch, tmp_path):
     failing = FakeBackend("failing_model", should_fail=True)
     working = FakeBackend("working_model", should_fail=False)
-    monkeypatch.setattr(fallback, "_select_chain", lambda shots: [failing, working])
+    monkeypatch.setattr(fallback, "_select_chain", lambda shots, **kw: [failing, working])
 
     model_used = fallback.generate(_job(), tmp_path)
 
@@ -64,7 +93,7 @@ def test_generate_falls_back_to_next_backend_on_failure(monkeypatch, tmp_path):
 
 def test_generate_raises_when_all_backends_fail(monkeypatch, tmp_path):
     only = FakeBackend("only_model", should_fail=True)
-    monkeypatch.setattr(fallback, "_select_chain", lambda shots: [only])
+    monkeypatch.setattr(fallback, "_select_chain", lambda shots, **kw: [only])
 
     with pytest.raises(RuntimeError):
         fallback.generate(_job(), tmp_path)
@@ -72,7 +101,7 @@ def test_generate_raises_when_all_backends_fail(monkeypatch, tmp_path):
 
 def test_generate_chains_reference_image_across_shots(monkeypatch, tmp_path):
     backend = FakeBackend("model")
-    monkeypatch.setattr(fallback, "_select_chain", lambda shots: [backend])
+    monkeypatch.setattr(fallback, "_select_chain", lambda shots, **kw: [backend])
     monkeypatch.setattr(fallback, "_extract_last_frame", lambda video_path, output_path: output_path)
     monkeypatch.setattr(fallback, "_concatenate", lambda clip_paths, output_path: None)
 

@@ -49,6 +49,25 @@ WAN_NEGATIVE_PROMPT = (
     "杂乱的背景，三条腿，背景人很多，倒着走"
 )
 
+# --- Wan 2.2 A14B video backend (manual "maximum quality" trigger) ----------
+# MoE: two ~14B experts loaded from Q4_K_M GGUF + group offload. NOT in the
+# automatic fallback chain — only used when a job is submitted with
+# max_quality=True (see fallback.py / api/jobs.py). Slow: ~20+ min/clip at 480p.
+WAN14B_GGUF_DIR = MODELS_ROOT / "wan2.2-t2v-a14b-gguf"
+WAN14B_DIFFUSERS_DIR = MODELS_ROOT / "wan2.2-t2v-a14b-diffusers"
+WAN14B_HIGH_GGUF = WAN14B_GGUF_DIR / "HighNoise" / "Wan2.2-T2V-A14B-HighNoise-Q4_K_M.gguf"
+WAN14B_LOW_GGUF = WAN14B_GGUF_DIR / "LowNoise" / "Wan2.2-T2V-A14B-LowNoise-Q4_K_M.gguf"
+WAN14B_INFER_SCRIPT = Path("scripts/wan14b_infer.py")
+WAN14B_NUM_FRAMES = 81
+WAN14B_FPS = 16
+WAN14B_HEIGHT = 480
+WAN14B_WIDTH = 832
+WAN14B_NUM_INFERENCE_STEPS = 40
+WAN14B_GUIDANCE_SCALE = 4.0
+WAN14B_GUIDANCE_SCALE_2 = 3.0
+WAN14B_FLOW_SHIFT = 3.0
+WAN14B_TIMEOUT_SECONDS = 7200
+
 # --- HunyuanVideo 1.5 (480p, T2V) video backend ----------------------------
 # 8.3B DiT + Qwen2.5-VL-7B text encoder. Needs diffusers >=0.36 (HunyuanVideo15*
 # classes), so it runs under .venv-wan as a subprocess. fp8 transformer + 4-bit

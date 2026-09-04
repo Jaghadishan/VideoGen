@@ -11,6 +11,7 @@ router = APIRouter(prefix="/jobs", tags=["jobs"])
 
 class GenerateRequest(BaseModel):
     session_id: str
+    max_quality: bool = False
 
 
 class BriefPreview(BaseModel):
@@ -22,6 +23,7 @@ class BriefPreview(BaseModel):
 class ConfirmRequest(BaseModel):
     brief: Brief
     needs_script_draft: bool = False
+    max_quality: bool = False
 
 
 @router.post("/generate", response_model=BriefPreview)
@@ -30,13 +32,15 @@ def generate(request: GenerateRequest) -> BriefPreview:
     from app.pipeline.video import fallback
 
     brief, needs_script_draft = llm.extract_brief(request.session_id)
-    estimated_seconds = fallback.estimate_seconds(brief.shots)
+    estimated_seconds = fallback.estimate_seconds(brief.shots, max_quality=request.max_quality)
     return BriefPreview(brief=brief, needs_script_draft=needs_script_draft, estimated_seconds=estimated_seconds)
 
 
 @router.post("/confirm", response_model=Job)
 def confirm(request: ConfirmRequest) -> Job:
-    return queue.submit(request.brief, needs_script_draft=request.needs_script_draft)
+    return queue.submit(
+        request.brief, needs_script_draft=request.needs_script_draft, max_quality=request.max_quality
+    )
 
 
 @router.get("", response_model=list[Job])

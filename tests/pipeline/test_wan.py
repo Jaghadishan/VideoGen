@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from app import config
-from app.pipeline.video.wan import Wan22TI2V5B
+from app.pipeline.video.wan import Wan22TI2V5B, Wan2214B
 from app.queue.models import Job, Shot
 
 from tests.conftest import make_brief
@@ -86,3 +86,53 @@ def test_nonzero_exit_raises_with_stderr_tail(monkeypatch, tmp_path):
 
     with pytest.raises(RuntimeError, match="CUDA out of memory"):
         Wan22TI2V5B().generate(_job(), Shot(description="x"), tmp_path / "out.mp4")
+
+
+def _setup_14b(monkeypatch, tmp_path):
+    gguf_dir = tmp_path / "gguf"
+    (gguf_dir / "HighNoise").mkdir(parents=True)
+    (gguf_dir / "LowNoise").mkdir(parents=True)
+    high = gguf_dir / "HighNoise" / "high.gguf"
+    low = gguf_dir / "LowNoise" / "low.gguf"
+    high.write_bytes(b"g")
+    low.write_bytes(b"g")
+    diff_dir = tmp_path / "diffusers"
+    diff_dir.mkdir()
+    wan_python = tmp_path / "python.exe"
+    wan_python.write_text("")
+    script = tmp_path / "wan14b_infer.py"
+    script.write_text("")
+    ti2v = tmp_path / "ti2v5b"
+    ti2v.mkdir()
+    monkeypatch.setattr(config, "WAN14B_HIGH_GGUF", high)
+    monkeypatch.setattr(config, "WAN14B_LOW_GGUF", low)
+    monkeypatch.setattr(config, "WAN14B_DIFFUSERS_DIR", diff_dir)
+    monkeypatch.setattr(config, "WAN14B_INFER_SCRIPT", script)
+    monkeypatch.setattr(config, "WAN_PYTHON", wan_python)
+    monkeypatch.setattr(config, "WAN_TI2V_5B_PATH", ti2v)
+
+
+def test_wan14b_errors_when_not_set_up(monkeypatch, tmp_path):
+    monkeypatch.setattr(config, "WAN14B_HIGH_GGUF", tmp_path / "nope.gguf")
+    with pytest.raises(FileNotFoundError, match="Wan 2.2 A14B not set up"):
+        Wan2214B().generate(_job(), Shot(description="x"), tmp_path / "out.mp4")
+
+
+def test_wan14b_command_construction(monkeypatch, tmp_path):
+    _setup_14b(monkeypatch, tmp_path)
+    captured = {}
+
+    def fake_run(cmd, **kwargs):
+        captured["cmd"] = cmd
+        Path(cmd[cmd.index("--output") + 1]).write_bytes(b"vid")
+        return subprocess.CompletedProcess(cmd, 0, "", "")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    Wan2214B().generate(_job(), Shot(description="an epic mountain vista"), tmp_path / "out.mp4")
+
+    cmd = captured["cmd"]
+    assert cmd[1].endswith("wan14b_infer.py")
+    assert "--high-gguf" in cmd and "--low-gguf" in cmd
+    assert "an epic mountain vista" in cmd[cmd.index("--prompt") + 1]
+    assert cmd[cmd.index("--steps") + 1] == str(config.WAN14B_NUM_INFERENCE_STEPS)

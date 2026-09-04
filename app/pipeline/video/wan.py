@@ -71,9 +71,65 @@ class Wan22TI2V5B(VideoBackend):
 
 
 class Wan2214B(VideoBackend):
-    """Manual 'maximum quality' trigger only — not part of the automatic fallback chain."""
+    """Wan 2.2 A14B (T2V) — the manual 'maximum quality, I don't mind waiting'
+    trigger. Not in the automatic fallback chain; only selected when a job is
+    submitted with max_quality=True. Two ~14B MoE experts from Q4 GGUF +
+    group offload, run via scripts/wan14b_infer.py under .venv-wan. Slow
+    (~20+ min per 480p clip). Text-to-video only."""
 
     name = "wan_2.2_14b"
 
     def generate(self, job: Job, shot: Shot, output_path: Path, reference_image: Path | None = None) -> None:
-        raise NotImplementedError("Wan 2.2 14B backend not yet implemented")
+        wan_python = config.WAN_PYTHON
+        script = config.WAN14B_INFER_SCRIPT
+        missing = [
+            str(p)
+            for p in (config.WAN14B_HIGH_GGUF, config.WAN14B_LOW_GGUF, config.WAN14B_DIFFUSERS_DIR, wan_python, script)
+            if not p.exists()
+        ]
+        if missing:
+            raise FileNotFoundError(f"Wan 2.2 A14B not set up — missing: {', '.join(missing)}. See 4070-setup.md.")
+
+        if reference_image is not None:
+            logger.warning(
+                "Wan 2.2 A14B backend is text-to-video only — ignoring reference image for job %s", job.job_id
+            )
+
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        prompt = build_shot_prompt(job, shot)
+
+        cmd = [
+            str(wan_python.resolve()),
+            str(script.resolve()),
+            "--diffusers-dir", str(config.WAN14B_DIFFUSERS_DIR.resolve()),
+            "--high-gguf", str(config.WAN14B_HIGH_GGUF.resolve()),
+            "--low-gguf", str(config.WAN14B_LOW_GGUF.resolve()),
+            "--text-encoder-dir", str(config.WAN_TI2V_5B_PATH.resolve()),
+            "--prompt", prompt,
+            "--negative-prompt", config.WAN_NEGATIVE_PROMPT,
+            "--output", str(output_path.resolve()),
+            "--frames", str(config.WAN14B_NUM_FRAMES),
+            "--steps", str(config.WAN14B_NUM_INFERENCE_STEPS),
+            "--guidance", str(config.WAN14B_GUIDANCE_SCALE),
+            "--guidance-2", str(config.WAN14B_GUIDANCE_SCALE_2),
+            "--height", str(config.WAN14B_HEIGHT),
+            "--width", str(config.WAN14B_WIDTH),
+            "--flow-shift", str(config.WAN14B_FLOW_SHIFT),
+            "--fps", str(config.WAN14B_FPS),
+        ]
+
+        logger.info("Wan 2.2 A14B generating shot for job %s: %s", job.job_id, prompt[:120])
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=config.WAN14B_TIMEOUT_SECONDS,
+            env={**os.environ, "PYTHONUNBUFFERED": "1", "PYTHONIOENCODING": "utf-8"},
+        )
+        if result.returncode != 0:
+            tail = (result.stderr or result.stdout or "").strip()[-2000:]
+            raise RuntimeError(f"Wan 2.2 A14B inference failed (exit {result.returncode}):\n{tail}")
+        if not output_path.exists():
+            raise RuntimeError(f"Wan 2.2 A14B reported success but wrote no file at {output_path}")

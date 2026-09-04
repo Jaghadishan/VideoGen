@@ -12,12 +12,13 @@ ACTIVE_STATUSES = {
 }
 
 
-def submit(brief: Brief, needs_script_draft: bool = False) -> Job:
+def submit(brief: Brief, needs_script_draft: bool = False, max_quality: bool = False) -> Job:
     job = Job(
         job_id=store.next_job_id(),
         created_at=datetime.now(),
         brief=brief,
         needs_script_draft=needs_script_draft,
+        max_quality=max_quality,
     )
     store.save_job(job)
     events.refresh_queue_positions(pending_jobs())

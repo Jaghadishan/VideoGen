@@ -8,7 +8,7 @@ from app.progress import events
 from app.pipeline.video.base import VideoBackend
 from app.pipeline.video.cogvideox import CogVideoX2B
 from app.pipeline.video.ltx import LTX23
-from app.pipeline.video.wan import Wan22TI2V5B
+from app.pipeline.video.wan import Wan22TI2V5B, Wan2214B
 from app.queue.models import Job, Shot
 
 logger = logging.getLogger(__name__)
@@ -24,23 +24,27 @@ CHAIN = [Wan22TI2V5B(), CogVideoX2B(), LTX23()]
 # Speed-first: for multi-shot jobs (see Multi-Shot Video Assembly in Specs.md).
 MULTI_SHOT_CHAIN = [CogVideoX2B(), LTX23(), Wan22TI2V5B()]
 
-# HunyuanVideo15 and Wan 2.2 14B are deliberately in neither chain — Hunyuan for
-# the speed reason above, Wan 14B as a manual "maximum quality" trigger only.
+# HunyuanVideo15 and Wan 2.2 14B are deliberately in neither automatic chain —
+# Hunyuan for the speed reason above; Wan 14B is the explicit "maximum quality"
+# trigger, used as a chain of one (no fallback) when job.max_quality is set.
+MAX_QUALITY_CHAIN = [Wan2214B()]
 
 
-def _select_chain(shots: list[Shot]) -> list[VideoBackend]:
+def _select_chain(shots: list[Shot], max_quality: bool = False) -> list[VideoBackend]:
+    if max_quality:
+        return MAX_QUALITY_CHAIN
     return MULTI_SHOT_CHAIN if len(shots) >= config.MULTI_SHOT_THRESHOLD else CHAIN
 
 
-def estimate_seconds(shots: list[Shot]) -> float:
-    chain = _select_chain(shots)
+def estimate_seconds(shots: list[Shot], max_quality: bool = False) -> float:
+    chain = _select_chain(shots, max_quality=max_quality)
     per_clip = config.VIDEO_MODEL_ETA_SECONDS.get(chain[0].name, 0)
     return len(shots) * per_clip
 
 
 def generate(job: Job, work_dir: Path) -> str:
     shots = job.brief.shots
-    chain = _select_chain(shots)
+    chain = _select_chain(shots, max_quality=job.max_quality)
 
     last_error: Exception | None = None
     for backend in chain:
