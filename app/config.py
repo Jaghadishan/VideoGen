@@ -49,6 +49,21 @@ WAN_NEGATIVE_PROMPT = (
     "杂乱的背景，三条腿，背景人很多，倒着走"
 )
 
+# --- LTX-Video (2B) video backend ------------------------------------------
+# Runs in the main venv (diffusers 0.34 has LTXPipeline). Weights download to the
+# HF cache on first use. Does real image-to-video, so it carries multi-shot
+# continuity like Wan.
+LTX_MODEL_ID = "Lightricks/LTX-Video"
+LTX_HEIGHT = 512           # both must stay divisible by 32
+LTX_WIDTH = 704
+LTX_NUM_FRAMES = 161       # 8k+1; ~6.4 s at 25 fps
+LTX_FPS = 25
+LTX_NUM_INFERENCE_STEPS = 50
+LTX_GUIDANCE_SCALE = 3.0
+LTX_DECODE_TIMESTEP = 0.05      # timestep-aware VAE (LTX 0.9.1+)
+LTX_DECODE_NOISE_SCALE = 0.025
+LTX_NEGATIVE_PROMPT = "worst quality, inconsistent motion, blurry, jittery, distorted"
+
 # --- Kokoro-82M voiceover backend --------------------------------------------
 # Weights download to the HF cache on first use (hexgrad/Kokoro-82M, ~330MB).
 KOKORO_LANG_CODE = "a"  # 'a' American English, 'b' British English
