@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 router = APIRouter(prefix="/chat", tags=["chat"])
@@ -29,4 +29,6 @@ def send_message(request: ChatMessageRequest) -> ChatMessageResponse:
 def get_messages(session_id: str):
     from app.chat import session
 
+    if not session.exists(session_id):
+        raise HTTPException(status_code=404, detail="chat session not found")
     return session.history(session_id)

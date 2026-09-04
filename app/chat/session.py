@@ -31,14 +31,21 @@ def get_or_create(session_id: str | None) -> str:
         return new_id
 
 
+def exists(session_id: str) -> bool:
+    with _lock:
+        return session_id in _sessions
+
+
 def add_message(session_id: str, role: str, content: str) -> None:
     with _lock:
         _sessions[session_id].messages.append(Message(role=role, content=content))
 
 
 def history(session_id: str) -> list[Message]:
+    # Sessions live in memory only, so an id from before a restart won't be here.
     with _lock:
-        return list(_sessions[session_id].messages)
+        session = _sessions.get(session_id)
+        return list(session.messages) if session else []
 
 
 def transcript(session_id: str) -> str:

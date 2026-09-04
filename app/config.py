@@ -11,7 +11,13 @@ RAW_AUDIO_FILENAME = "audio_raw.wav"
 MODELS_ROOT = Path("models")
 
 CHAT_MODEL_PATH = MODELS_ROOT / "qwen3-14b-q4_k_m.gguf"
-CHAT_CONTEXT_SIZE = 8192
+# Qwen3-14B is native 32K; 8192 was too tight — a longer planning chat plus the
+# brief-extraction system prompt overflowed it and llama.cpp aborts the whole
+# process (GGML_ASSERT in the KV-cache set_rows op) rather than erroring cleanly.
+# 16384 leaves comfortable headroom; llm.py also trims prompts to fit as a guard.
+CHAT_CONTEXT_SIZE = 16384
+CHAT_REPLY_MAX_TOKENS = 1024
+CHAT_EXTRACT_MAX_TOKENS = 3072
 
 MULTI_SHOT_THRESHOLD = 5
 

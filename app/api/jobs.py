@@ -28,8 +28,11 @@ class ConfirmRequest(BaseModel):
 
 @router.post("/generate", response_model=BriefPreview)
 def generate(request: GenerateRequest) -> BriefPreview:
-    from app.chat import llm
+    from app.chat import llm, session
     from app.pipeline.video import fallback
+
+    if not session.exists(request.session_id):
+        raise HTTPException(status_code=404, detail="chat session expired — start a new conversation")
 
     brief, needs_script_draft = llm.extract_brief(request.session_id)
     estimated_seconds = fallback.estimate_seconds(brief.shots, max_quality=request.max_quality)

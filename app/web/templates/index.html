@@ -335,8 +335,19 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ session_id: state.sessionId }),
       });
-      const preview = await res.json();
-      openConfirmView(preview);
+      if (!res.ok) {
+        let detail = 'Could not build the brief. Try again in a moment.';
+        try { detail = (await res.json()).detail || detail; } catch (e) {}
+        if (res.status === 404) {
+          localStorage.removeItem('sessionId');
+          state.sessionId = null;
+        }
+        appendMessage('assistant', detail);
+        return;
+      }
+      openConfirmView(await res.json());
+    } catch (err) {
+      appendMessage('assistant', 'Something went wrong building the brief. Try again?');
     } finally {
       el('generate-btn').disabled = false;
     }
