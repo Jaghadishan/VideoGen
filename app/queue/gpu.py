@@ -1,3 +1,4 @@
+import json
 import subprocess
 import threading
 from dataclasses import dataclass
@@ -19,14 +20,29 @@ class GpuReading:
     utilization_pct: float
 
 
-_override = GpuOverride.AUTO
 _override_lock = threading.Lock()
+
+
+def _load_override() -> GpuOverride:
+    try:
+        return GpuOverride(json.loads(config.GPU_OVERRIDE_FILE.read_text())["override"])
+    except (OSError, ValueError, KeyError):
+        return GpuOverride.AUTO
+
+
+# Persisted so "about to game, don't start anything" survives a service restart.
+_override = _load_override()
 
 
 def set_override(value: GpuOverride) -> None:
     global _override
     with _override_lock:
         _override = value
+        try:
+            config.GPU_OVERRIDE_FILE.parent.mkdir(parents=True, exist_ok=True)
+            config.GPU_OVERRIDE_FILE.write_text(json.dumps({"override": value.value}))
+        except OSError:
+            pass
 
 
 def get_override() -> GpuOverride:

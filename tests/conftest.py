@@ -9,6 +9,7 @@ def isolated_data_dir(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "DATA_ROOT", tmp_path)
     monkeypatch.setattr(config, "DATA_DIR", tmp_path / "jobs")
     monkeypatch.setattr(config, "COUNTER_FILE", tmp_path / "counter.json")
+    monkeypatch.setattr(config, "GPU_OVERRIDE_FILE", tmp_path / "gpu_override.json")
 
 
 def make_brief(num_shots: int = 1) -> Brief:

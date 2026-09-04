@@ -129,11 +129,35 @@
   }
   #result video { width: 100%; border-radius: 8px; margin-bottom: 12px; }
   #new-video-btn { margin-top: 12px; }
+
+  #status-bar {
+    display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+    margin-bottom: 16px; font-size: .8rem; color: var(--muted);
+  }
+  .status-pill {
+    padding: 3px 9px; border-radius: 999px;
+    border: 1px solid var(--border); background: var(--panel);
+  }
+  .status-pill.ok { color: var(--done); border-color: #bfe6cf; }
+  .status-pill.bad { color: var(--danger); border-color: #f3b9b9; background: #fdecec; }
+  #status-override select { font: inherit; font-size: .8rem; padding: 2px 6px; width: auto; border-radius: 6px; }
 </style>
 </head>
 <body>
 <div id="app">
   <header>VideoGen</header>
+
+  <div id="status-bar">
+    <span id="status-worker" class="status-pill">worker…</span>
+    <span id="status-gpu" class="status-pill">gpu…</span>
+    <label id="status-override">GPU:
+      <select id="gpu-override">
+        <option value="auto">auto</option>
+        <option value="force_allow">force allow</option>
+        <option value="force_block">block (gaming)</option>
+      </select>
+    </label>
+  </div>
 
   <section id="chat-view" class="panel">
     <div id="messages"></div>
@@ -508,6 +532,53 @@
     show(chatView);
     appendMessage('assistant', OPENING_MESSAGE);
   });
+
+  // ---------- status bar ----------
+
+  async function refreshStatus() {
+    try {
+      const res = await fetch('/status');
+      if (!res.ok) throw new Error('status ' + res.status);
+      const s = await res.json();
+
+      const w = el('status-worker');
+      w.textContent = s.worker_alive ? 'worker online' : 'worker offline';
+      w.className = 'status-pill ' + (s.worker_alive ? 'ok' : 'bad');
+
+      const g = el('status-gpu');
+      if (!s.gpu.reading_ok) {
+        g.textContent = 'gpu ?';
+        g.className = 'status-pill';
+      } else {
+        const used = (s.gpu.memory_used_mb / 1024).toFixed(1);
+        const total = (s.gpu.memory_total_mb / 1024).toFixed(1);
+        g.textContent = `gpu ${used}/${total} GB · ${s.gpu.available ? 'free' : 'in use'}`;
+        g.className = 'status-pill ' + (s.gpu.available ? 'ok' : 'bad');
+      }
+
+      if (document.activeElement !== el('gpu-override')) el('gpu-override').value = s.gpu.override;
+    } catch (err) {
+      el('status-worker').textContent = 'worker offline';
+      el('status-worker').className = 'status-pill bad';
+      el('status-gpu').textContent = 'gpu ?';
+      el('status-gpu').className = 'status-pill';
+    }
+  }
+
+  el('gpu-override').addEventListener('change', async (e) => {
+    try {
+      await fetch('/gpu/override', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ override: e.target.value }),
+      });
+    } finally {
+      refreshStatus();
+    }
+  });
+
+  refreshStatus();
+  setInterval(refreshStatus, 5000);
 
   // ---------- boot ----------
 

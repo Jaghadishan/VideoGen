@@ -5,7 +5,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
 
-from app.api import chat, jobs, ws
+from app.api import chat, jobs, status, ws
 from app.progress.events import bus
 from app.queue import worker
 
@@ -15,6 +15,7 @@ app = FastAPI()
 
 app.include_router(chat.router)
 app.include_router(jobs.router)
+app.include_router(status.router)
 app.include_router(ws.router)
 
 

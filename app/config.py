@@ -3,6 +3,7 @@ from pathlib import Path
 DATA_ROOT = Path("data")
 DATA_DIR = DATA_ROOT / "jobs"
 COUNTER_FILE = DATA_ROOT / "counter.json"
+GPU_OVERRIDE_FILE = DATA_ROOT / "gpu_override.json"
 VIDEO_OUTPUT_FILENAME = "video.mp4"
 RAW_VIDEO_FILENAME = "video_raw.mp4"
 RAW_AUDIO_FILENAME = "audio_raw.wav"

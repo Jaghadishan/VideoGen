@@ -20,6 +20,7 @@ build/
 data/jobs/*
 !data/jobs/.gitkeep
 data/counter.json
+data/gpu_override.json
 
 # Downloaded model weights
 models/
