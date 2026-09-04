@@ -14,6 +14,11 @@ CHAT_CONTEXT_SIZE = 8192
 
 MULTI_SHOT_THRESHOLD = 5
 
+# GPU is considered "free for a job" when used VRAM is at or below this. The
+# 4070 box idles around 600-750 MB (desktop compositor + browser), so 500 was
+# too tight and blocked every job; a game uses multiple GB, well above this.
+GPU_IDLE_VRAM_MB = 2000.0
+
 # --- CogVideoX-2B video backend -------------------------------------------------
 # Local snapshot dir (downloaded with `hf download THUDM/CogVideoX-2b --local-dir`).
 COGVIDEOX_2B_PATH = MODELS_ROOT / "cogvideox-2b"

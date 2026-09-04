@@ -3,7 +3,7 @@ import threading
 from dataclasses import dataclass
 from enum import Enum
 
-IDLE_VRAM_MB = 500.0
+from app import config
 
 
 class GpuOverride(str, Enum):
@@ -63,4 +63,4 @@ def gpu_available() -> bool:
     if reading is None:
         return False
 
-    return reading.memory_used_mb <= IDLE_VRAM_MB
+    return reading.memory_used_mb <= config.GPU_IDLE_VRAM_MB
