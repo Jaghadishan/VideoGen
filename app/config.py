@@ -49,6 +49,30 @@ WAN_NEGATIVE_PROMPT = (
     "杂乱的背景，三条腿，背景人很多，倒着走"
 )
 
+# --- HunyuanVideo 1.5 (480p, T2V) video backend ----------------------------
+# 8.3B DiT + Qwen2.5-VL-7B text encoder. Needs diffusers >=0.36 (HunyuanVideo15*
+# classes), so it runs under .venv-wan as a subprocess. fp8 transformer + 4-bit
+# text encoder + model CPU offload to fit 12GB VRAM / 32GB RAM. Quality-first
+# default for single-shot jobs; multi-shot jobs skip it (see fallback.py).
+# Text-to-video only here — the I2V checkpoint is a separate ~33GB model we
+# don't download, and multi-shot (where I2V continuity matters) skips Hunyuan.
+HUNYUAN_T2V_PATH = MODELS_ROOT / "hunyuanvideo-1.5-480p-t2v"
+HUNYUAN_INFER_SCRIPT = Path("scripts/hunyuan_infer.py")
+HUNYUAN_NUM_FRAMES = 121
+HUNYUAN_FPS = 24
+HUNYUAN_NUM_INFERENCE_STEPS = 50
+HUNYUAN_TIMEOUT_SECONDS = 5400
+# HunyuanVideo 1.5's variable-length attention is unusably slow (~200-1000 s/step)
+# without a varlen flash/sage kernel, and those have no Windows build. On the
+# 4070 box the best available fallback is torch's cuDNN SDPA — still slow, so
+# Hunyuan is currently OUT of the automatic fallback chain (see fallback.py).
+# Set to "flash_varlen_hub" on Linux / flash-attn-capable hardware.
+HUNYUAN_ATTENTION_BACKEND = "_native_cudnn"
+HUNYUAN_NEGATIVE_PROMPT = (
+    "blurry, low quality, low resolution, distorted, deformed, watermark, text, "
+    "overexposed, static, jpeg artifacts, ugly, extra fingers, bad hands"
+)
+
 # --- LTX-Video (2B) video backend ------------------------------------------
 # Runs in the main venv (diffusers 0.34 has LTXPipeline). Weights download to the
 # HF cache on first use. Does real image-to-video, so it carries multi-shot

@@ -7,24 +7,25 @@ from app import config
 from app.progress import events
 from app.pipeline.video.base import VideoBackend
 from app.pipeline.video.cogvideox import CogVideoX2B
-from app.pipeline.video.hunyuan import HunyuanVideo15
 from app.pipeline.video.ltx import LTX23
 from app.pipeline.video.wan import Wan22TI2V5B
 from app.queue.models import Job, Shot
 
 logger = logging.getLogger(__name__)
 
-# Quality-first: default is HunyuanVideo, falling back on failure (OOM, crash,
-# timeout). Used for single/few-shot jobs, where the time cost is bounded.
-CHAIN = [HunyuanVideo15(), Wan22TI2V5B(), CogVideoX2B(), LTX23()]
+# Quality-first: for single/few-shot jobs, where the time cost is bounded.
+# HunyuanVideo 1.5 (the spec's intended default) is currently EXCLUDED: its
+# variable-length attention has no Windows flash/sage kernel and runs at
+# ~200-1000 s/step on the 4070 (hours per clip). The backend is implemented
+# (pipeline/video/hunyuan.py) — re-add it here once on flash-attn-capable
+# hardware. So the effective default is Wan 2.2 TI2V-5B.
+CHAIN = [Wan22TI2V5B(), CogVideoX2B(), LTX23()]
 
 # Speed-first: for multi-shot jobs (see Multi-Shot Video Assembly in Specs.md).
-# Hunyuan is excluded entirely — 15-20 min/clip across dozens of shots isn't
-# viable on a shared, single-GPU queue.
 MULTI_SHOT_CHAIN = [CogVideoX2B(), LTX23(), Wan22TI2V5B()]
 
-# Wan 2.2 14B is deliberately in neither chain — manual "maximum quality"
-# trigger only, not part of any automatic selection.
+# HunyuanVideo15 and Wan 2.2 14B are deliberately in neither chain — Hunyuan for
+# the speed reason above, Wan 14B as a manual "maximum quality" trigger only.
 
 
 def _select_chain(shots: list[Shot]) -> list[VideoBackend]:
